@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+  <head>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <title>Socket.IO chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial;}
+      div.message-container {
+          height: 90%;
+          overflow-y: scroll;
+      }
+      div.input-container {
+          height: 10%;
+      }
+      div.chatbox {
+          height: 100%;
+      }
+      form { background: #000; padding: 3px; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+    </style>
+  </head>
+  <body>
+    <div class="chatbox">
+        <div class="message-container"><ul id="messages"></ul></div>
+        <div class="input-container">
+            <form action="">
+                <input id="m" autocomplete="off" /><button>Send</button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+        function getCookie(name) {
+            var nameEQ = name + "=";
+            var ca = document.cookie.split(';');
+            for(var i=0;i < ca.length;i++) {
+                var c = ca[i];
+                while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            }
+            return null;
+        }
+
+        var loggedIn = false;
+        var person = getCookie("emoChat_cookie");
+        if(person) {
+            loggedIn = true;
+            console.log("user" +person+ " already logged in");
+        } else {
+            while(person==null || person == "") {
+                person = prompt("Please enter your username:", "JohnWick_12");
+            }
+        }
+
+        $(function () {
+            function chatMessageSend(e){
+                e.preventDefault(); // prevents page reloading
+                var message = {senderName: person , message : $('#m').val()};
+                socket.emit('chat message', message);
+
+                $('#m').val('');
+                return false;
+            };
+
+            function renderMessage(messageObject) {
+                let userName = messageObject.senderName;
+                let msg = messageObject.message;
+                $('#messages').append($('<li>').html("<strong  style=\"color:blue\">"+userName+"</strong> : "+msg));
+            }
+
+            var socket = io();//creates conn. 
+            //User authentication
+
+            if(!loggedIn) {
+                socket.emit('createUser', person);
+                loggedIn = true;
+            } else {
+                socket.emit('userLoggedInWithCookie', person);
+            }
+
+            $('form').submit(chatMessageSend);
+            socket.on('cookie_event', function(cookieObject){
+                document.cookie="emoChat_cookie="+cookieObject.emoChat_cookie;
+                console.log("user "+person+" logged in");
+            })
+
+            socket.on('loadConversation', function(conversationObject){
+                if(conversationObject) {
+                    conversationObject.forEach(message => {
+                        renderMessage(message);
+                    });
+                }
+            });
+
+            socket.on('chat message', function(messageObject){
+                renderMessage(messageObject);
+            });
+
+            socket.on('user_connect', function(userName){
+                $('#messages').append($('<li>').html("<strong  style=\"color:green\">"+userName+" logged in</strong>"));
+            });
+
+            socket.on('user_disconnect', function(userName){
+                $('#messages').append($('<li>').html("<strong  style=\"color:red\">"+userName+" logged out</strong>"));
+            });
+
+        });
+    </script>
+  </body>
+</html>

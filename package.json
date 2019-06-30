@@ -1,0 +1,12 @@
+{
+    "name": "nchatapp",
+    "version": "0.0.1",
+    "description": "my first socket.io app",
+    "dependencies": {
+        "express": "^4.15.2",
+        "mongodb": "^3.2.7",
+        "redis": "^2.8.0",
+        "sentiment": "^5.0.1",
+        "socket.io": "^2.2.0"
+    }
+}
